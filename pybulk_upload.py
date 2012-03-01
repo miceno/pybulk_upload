@@ -13,26 +13,24 @@ import xlrd
 import os
 import zipfile
 from datetime import datetime
+import logging
+import tempfile
+import cgi
 
-help_message = ''' [options] xls_file_name
--e, --end       End row
--o, --output    Output file name
--s, --start     Start row
--z, --zipfile   Zip file containing the images
-'''
-
-class Generator:
-    """Generator: takes an xls, a zipfile, start and end rows and builds a txt file"""
-    
-    def __init__( self, xls_file_name, zip_file_name, start, end, **kwargs ):
-        # output_file_name is the basename of the zipfile
-        self.output_file_name = kwargs.get( 'output_file_name', os.path.splitext( zip_file_name ) + ".txt" )
+# Log file at tmp dir based on script name
+tempdir = tempfile.gettempdir()
+print "tempdir=", tempdir
+log_file=os.path.join( tempdir, os.path.splitext( sys.argv[0] )[0]+ ".log" )
+logging.basicConfig(filename=log_file,level=logging.DEBUG)
+   
+class HtmlFormatter:
+    def __init__ ( self ):
         pass
         
-    def generate( self ):
-        "Generate the txt file"
-        pass
-   
+    def format( self, payload ):
+        
+        return result
+    
 class BulkOperationFormatter:
     """Format an array to produce the bulk_operation output file format.
     Usage is:
@@ -98,7 +96,7 @@ class BulkOperationFormatter:
         MODE_1904 = 1
         
         date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
-        print "date: ", datetime(*date_tuple)
+        logging.debug( "date: ", datetime(*date_tuple) )
         keywords.append( self.tupledate_to_isodate( date_tuple ) )
 
         result.append( ",".join( keywords ) )
@@ -112,8 +110,9 @@ class Usage(Exception):
 
 class Slicer:
     """Slice an XLS file"""
-    def __init__( self, file_name, sheet_index ):
+    def __init__( self, file_name, sheet_index=0 ):
         self.sheet = xlrd.open_workbook( file_name, on_demand = True ).sheet_by_index( sheet_index )
+        self.num_rows = self.sheet.nrows
         
     def slice( self, start, end ):
         if start> end:
@@ -127,40 +126,34 @@ def main(argv=None):
     if argv is None:
         argv = sys.argv
     try:
-        try:
-            opts, args = getopt.getopt(argv[1:], "hb:z:s:e:o:v", ["help", "basepath", "zipfile", "start", "end", "output"])
-        except getopt.error, msg:
-            raise Usage(msg)
+        form = cgi.FieldStorage()
+        for i in form:
+            logging.debug( "%s: %s" % ( i, form.getvalue( i ) ) )
         
-        if not len( args ):
-            raise Usage( help_message )
+        requisites = ( 'zip', 'xls' )
+        for requisite in requisites:
+            if requisite not in form:
+                raise ValueError, 'Required parameter not in query string: %s' % requisite
+                
         # XLS file to process   
-        xls_file_name = args[0]
-        base_path = os.path.realpath(__file__)
-        zip_file_name = os.path.splitext( xls_file_name )[0] + ".zip"
+        # xls_file_name = 'fotos.xls'
+        xls_file_name = form[ 'xls' ]
         
-        # option processing
-        for option, value in opts:
-            if option == "-v":
-                verbose = True
-            if option in ("-h", "--help"):
-                raise Usage(help_message)
-            if option in ("-z", "--zipfile"):
-                zip_file_name = value
-            if option in ("-b", "--basepath"):
-                base_path = value
-            if option in ("-o", "--output"):
-                output = value
-            if option in ("-s", "--start"):
-                start = int( value )
-            if option in ("-e", "--end"):
-                end = int( value )
+        slicer = Slicer( xls_file_name.file, 0 )
+        # Start position
+        start = int( form.getfirst( 'start', 0 ) )
+        # End position
+        end = int( form.getfirst( 'end', slicer.num_rows ) )
+        
+        zip_file_name = form[ 'zip' ]
+        
+        # Use a temporal directory to decompress the zip file
+        base_path = tempfile.mkdtemp( )        
     
-        slicer = Slicer( xls_file_name, 0 )
         rows = slicer.slice( start, end )
-        print "\n".join( [ str( r ) for r in rows ] )
+        # print "\n".join( [ str( r ) for r in rows ] )
         
-        z = zipfile.ZipFile( zip_file_name, 'r' )
+        z = zipfile.ZipFile( zip_file_name.file, 'r' )
         files = sorted( z.namelist() )
         
         b = BulkOperationFormatter( base_path )
@@ -170,12 +163,12 @@ def main(argv=None):
         for r, f in zip( rows, files ):
             result.append( b.format( r, f) )
         
+        logging.debug( "result= ", str( result ) )
         # print "debug result= ", repr( result )    
         # print "\n".join( [ "|".join( r ) for r in result ] )
         
     except Usage, err:
-        print >> sys.stderr, sys.argv[0].split("/")[-1] + ": " + str(err.msg)
-        print >> sys.stderr, "\t for help use --help"
+        logging.error( sys.argv[0].split("/")[-1] + ": " + str(err.msg) )
         return 2
 
 
