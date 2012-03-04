@@ -1,5 +1,6 @@
 #!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 # encoding: utf-8
+#!/usr/bin/env python 
 """
 pybulk_upload.py
 
@@ -18,6 +19,11 @@ import tempfile
 import collections
 import cgi
 
+# Debug trace for CGI
+import cgitb
+
+cgitb.enable()
+
 # Log file at tmp dir based on script name
 tempdir = tempfile.gettempdir()
 log_file=os.path.join( tempdir, os.path.splitext( sys.argv[0] )[0]+ ".log" )
@@ -31,11 +37,8 @@ class HtmlFormatter:
         result = []
         result.append( '<div class="results-container">' )
         for p in payload:
-            result.append( "<div class='result-item'")
-            result.append( "<div class='result-key'>%s</div>" % k )
-            result.append( "<div class='result-value'>%s</div>" % v )
-            result.append( "</div")
-        result.append( '</div>')
+            result.append( "<div class='result-value'>%s</div>" % p )
+        result.append( '</div>' )
         return result
     
 class BulkOperationFormatter:
@@ -46,9 +49,9 @@ class BulkOperationFormatter:
       result = []
       result = b.header()
       for r, f in zip( rows, l ):
-          result.append( b.format( r, f) )
+          result.append( b.generate( r, f) )
     """
-    def __init__( self, base_path ):
+    def __init__( self, base_path, field_delimiter = '\t', line_delimiter = '\r\n' ):
         self.NUMBER = 0
         self.REFERENCE = 1
         self.TERMS = 2
@@ -58,6 +61,9 @@ class BulkOperationFormatter:
         self.AUTHOR = 6
         self.DATE = 7
         self.MAX_SUMMARY = 100
+        
+        self.field_delimiter = field_delimiter
+        self.line_delimiter = line_delimiter
         
         self.base_path = base_path
         pass
@@ -84,8 +90,12 @@ class BulkOperationFormatter:
         time = "T%02d:%02d:%02d" % (hh,mm,ss) if filter(nonzero, (hh,mm,ss)) or not date else ''
         return date+time
       
-    def format( self, row, file_name ):
-        """format a row"""
+    def format( self, row ):
+        """format using field delimiters"""
+        return self.field_delimiter.join( row )
+
+    def generate( self, row, file_name ):
+        """generate a row"""
         result = []
         # Strip extention of the filename
         result.append( os.path.splitext( os.path.split( file_name )[1] )[0] )
@@ -127,22 +137,78 @@ class Slicer:
             start, end = ( end, start )
         return [ self.sheet.row( i ) for i in xrange( start, end ) ]
 
+CHUNK_SIZE = 10000
+
+# Generator to buffer file chunks
+def fbuffer(f, chunk_size=CHUNK_SIZE):
+   while True:
+      chunk = f.read(chunk_size)
+      if not chunk: break
+      yield chunk
+
+def copy_file( fileitem, target_path ):
+    """Copy an uploaded file to a new location.
+    Returns the name of the file or None in case the file is not copied"""
+    filename = None
+    # Test if the file was uploaded
+    if fileitem.filename:
+        # strip leading path from file name to avoid directory traversal attacks
+        base_filename = os.path.basename(fileitem.filename)
+        filename = target_path + base_filename
+        f = open( filename, 'wb', CHUNK_SIZE)
+
+        try:
+            # Read the file in chunks
+            for chunk in fbuffer(fileitem.file):
+                f.write(chunk)
+            f.close()
+        except:
+            filename = None
+            f.close()
+       
+    return filename
+    
+def write_response( headers, response ):
+    for h in headers:
+        print h
+    print ""
+    for r in response:
+        print response
+    
 def main(argv=None):
     
     start = 0
     end = 0
+    response = []
+    headers = []
+    
+    # write_response( headers, response )
     if argv is None:
         argv = sys.argv
     try:
-        form = cgi.FieldStorage()
-        for i in form:
-            logging.debug( "%s: %s" % ( i, form.getvalue( i ) ) )
+        field_delimiter = '\t'
+        line_delimiter = '\r\n'
+        destination_path = os.path.join( 'gallery','import')
         
+        form = cgi.FieldStorage()
+        #for i in form:
+        #    logging.debug( "%s: %s" % ( i, form.getvalue( i ) ) )
+
+        # Check requisite fields
         requisites = ( 'zip', 'xls' )
         for requisite in requisites:
             if requisite not in form:
                 raise ValueError, 'Required parameter not in query string: %s' % requisite
-                
+
+        # Create destination path
+        try:
+            os.makedirs( destination_path )
+        except:
+            pass
+        # Use a temporal directory to decompress the zip file
+        base_path = tempfile.mkdtemp( dir = destination_path )
+
+        # Read data from the XLS file
         # XLS file to process   
         # xls_file_name = 'fotos.xls'
         xls_file_name = form[ 'xls' ].filename
@@ -152,19 +218,22 @@ def main(argv=None):
         start = int( form.getfirst( 'start', 0 ) )
         # End position
         end = int( form.getfirst( 'end', slicer.num_rows ) )
-        
-        zip_file_name = form[ 'zip' ]
-        
-        # Use a temporal directory to decompress the zip file
-        base_path = tempfile.mkdtemp( )        
-    
         rows = slicer.slice( start, end )
         # print "\n".join( [ str( r ) for r in rows ] )
         
-        z = zipfile.ZipFile( zip_file_name.file, 'r' )
+        # Process the ZIP file
+        # Read the names of the files
+        zip_file_param = form[ 'zip' ]
+        base_name = os.path.splitext( os.path.basename( zip_file_param.filename ) )[0]
+        # copy it to the temp directory
+        zip_file_name = copy_file( zip_file_param, base_path )
+        z = zipfile.ZipFile( zip_file_param.file, 'r' )
         files = sorted( z.namelist() )
+        logging.info( "Zip file copied to %s", zip_file_name )
+        logging.debug( "Files to sort: %s" % ",".join( files ) )
         
-        b = BulkOperationFormatter( base_path )
+        # Generating bulk_upload text file
+        b = BulkOperationFormatter( base_path, field_delimiter )
         h = HtmlFormatter()
         
         result = []
@@ -173,22 +242,53 @@ def main(argv=None):
         # Format each row
         for r, f in zip( rows, files ):
             # Output each row processed
-            # html_result.append( h.format( r ))
-            result.append( b.format( r, f) )
-        
-        # print "".join( html_result )
-        print "Content-type: text/html"
-        print ""
-        # print ",<br/>".join( [ r for r in result] )
-        print "<br/>".join( [ ",".join( r ).encode( 'utf-8') for r in result] )
+            row = b.generate( r, f)
+            logging.debug( "row: %s" % row)
+            result.append( row )
+            html_result.append( h.format( row ) )
+
         logging.debug( "result= %s" % result )
-        # print "debug result= ", repr( result )    
-        # print "\n".join( [ "|".join( r ) for r in result ] )
+        logging.debug( "html_result = %s" % html_result )
         
+        headers.append( "Content-type: text/html" )
+        response.append( """<html>
+        <head>
+            <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+            <link rel="stylesheet" href="bulk.css" type="text/css" media="screen" title="bulk" charset="utf-8">
+            <title>Bulk results</title>
+        </head>
+        <body>""")
+        
+        # print ",<br/>".join( [ r for r in result] )
+        txt_result = ""
+        txt_result = line_delimiter.join( [ field_delimiter.join( r ).encode( 'utf-8') for r in result] )
+        # Write output file
+        output_file_name = os.path.join( destination_path, base_name ) + ".txt"
+        message = "Output File name located at: %s" % output_file_name
+        logging.info( message )
+        response.append( "<div class='message'>%s</div>" % message )
+        response.append( "<hr/>" )
+
+        output_file = open( output_file_name, "w" )
+        for r in result:
+            output_file.write( b.format( r ).encode( 'utf-8' ) )
+            output_file.write( line_delimiter )
+        output_file.close()
+        
+        for l in html_result:
+            for r in l:
+                response.append( r.encode( 'utf-8') )
+        response.append( "</body></html>" )
     except Usage, err:
         logging.error( sys.argv[0].split("/")[-1] + ": " + str(err.msg) )
         return 2
-
-
+        """except:
+            headers = []
+            headers.append( 'Status: 500' )
+            response = []
+            response.append( "Error" )"""
+        pass
+    write_response( headers, response )
+    
 if __name__ == "__main__":
     sys.exit(main())
