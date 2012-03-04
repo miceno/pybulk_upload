@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 # encoding: utf-8
 """
 pybulk_upload.py
@@ -15,11 +15,11 @@ import zipfile
 from datetime import datetime
 import logging
 import tempfile
+import collections
 import cgi
 
 # Log file at tmp dir based on script name
 tempdir = tempfile.gettempdir()
-print "tempdir=", tempdir
 log_file=os.path.join( tempdir, os.path.splitext( sys.argv[0] )[0]+ ".log" )
 logging.basicConfig(filename=log_file,level=logging.DEBUG)
    
@@ -28,7 +28,14 @@ class HtmlFormatter:
         pass
         
     def format( self, payload ):
-        
+        result = []
+        result.append( '<div class="results-container">' )
+        for p in payload:
+            result.append( "<div class='result-item'")
+            result.append( "<div class='result-key'>%s</div>" % k )
+            result.append( "<div class='result-value'>%s</div>" % v )
+            result.append( "</div")
+        result.append( '</div>')
         return result
     
 class BulkOperationFormatter:
@@ -96,7 +103,7 @@ class BulkOperationFormatter:
         MODE_1904 = 1
         
         date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
-        logging.debug( "date: ", datetime(*date_tuple) )
+        logging.debug( "date: %s" % datetime(*date_tuple).isoformat() )
         keywords.append( self.tupledate_to_isodate( date_tuple ) )
 
         result.append( ",".join( keywords ) )
@@ -111,7 +118,8 @@ class Usage(Exception):
 class Slicer:
     """Slice an XLS file"""
     def __init__( self, file_name, sheet_index=0 ):
-        self.sheet = xlrd.open_workbook( file_name, on_demand = True ).sheet_by_index( sheet_index )
+        n = open( os.devnull, "w")
+        self.sheet = xlrd.open_workbook( file_name, logfile= n, verbosity=0, on_demand = True ).sheet_by_index( sheet_index )
         self.num_rows = self.sheet.nrows
         
     def slice( self, start, end ):
@@ -137,9 +145,9 @@ def main(argv=None):
                 
         # XLS file to process   
         # xls_file_name = 'fotos.xls'
-        xls_file_name = form[ 'xls' ]
+        xls_file_name = form[ 'xls' ].filename
         
-        slicer = Slicer( xls_file_name.file, 0 )
+        slicer = Slicer( xls_file_name, 0 )
         # Start position
         start = int( form.getfirst( 'start', 0 ) )
         # End position
@@ -157,13 +165,23 @@ def main(argv=None):
         files = sorted( z.namelist() )
         
         b = BulkOperationFormatter( base_path )
+        h = HtmlFormatter()
         
         result = []
+        html_result = []
         result.append( b.header() )
+        # Format each row
         for r, f in zip( rows, files ):
+            # Output each row processed
+            # html_result.append( h.format( r ))
             result.append( b.format( r, f) )
         
-        logging.debug( "result= ", str( result ) )
+        # print "".join( html_result )
+        print "Content-type: text/html"
+        print ""
+        # print ",<br/>".join( [ r for r in result] )
+        print "<br/>".join( [ ",".join( r ).encode( 'utf-8') for r in result] )
+        logging.debug( "result= %s" % result )
         # print "debug result= ", repr( result )    
         # print "\n".join( [ "|".join( r ) for r in result ] )
         
