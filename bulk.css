@@ -1,0 +1,14 @@
+.form-input{
+    
+}
+label {
+    /* font-size: 120%; */
+}
+body{
+    font: normal normal normal 1.2em Arial, sans-serif;
+}
+.form-send{
+    font-size: 150%;
+    font-weight: bold;
+    border: 20px;
+}

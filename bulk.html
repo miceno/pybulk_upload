@@ -1,0 +1,31 @@
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" href="bulk.css" type="text/css" media="screen" title="bulk" charset="utf-8">
+    <title>Bulk Upload form</title>
+</head>
+<body>
+    <h1 id="">Bulk Upload</h1>
+<form action="pybulk_upload.py" enctype="multipart/form-data" method="post">
+    <div class='form-input'>
+        <label for='form-start-control'>Start:</label>
+        <input id='form-start-control' type="text" name="start" size="30">
+    </p>
+    <div class='form-input'>
+        <label for='form-end-control'>End:</label>
+        <input id='form-end-control' type="text" name="end" size="30">
+    </p>
+    <div class='form-input'>
+        <label for='form-xls-control'>Please specify a XLS file, or a set of files:</label>
+        <input id='form-xls-control' type="file" name="xls" size="40">
+    </p>
+    <div class='form-input'>
+        <label for='form-zip-control'>Please specify a ZIP file, or a set of files:</label>
+        <input id='form-zip-control' type="file" name="zip" size="40">
+    </p>
+    <div class='form-button'>
+        <input class='form-send' type="submit" value="Send">
+    </div>
+</form>
+</body>
+</html>
