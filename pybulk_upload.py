@@ -154,7 +154,7 @@ def copy_file( fileitem, target_path ):
     if fileitem.filename:
         # strip leading path from file name to avoid directory traversal attacks
         base_filename = os.path.basename(fileitem.filename)
-        filename = target_path + base_filename
+        filename = os.path.join( target_path, base_filename )
         f = open( filename, 'wb', CHUNK_SIZE)
 
         try:
@@ -263,7 +263,7 @@ def main(argv=None):
         txt_result = ""
         txt_result = line_delimiter.join( [ field_delimiter.join( r ).encode( 'utf-8') for r in result] )
         # Write output file
-        output_file_name = os.path.join( destination_path, base_name ) + ".txt"
+        output_file_name = os.path.join( base_path, base_name ) + ".txt"
         message = "Output File name located at: %s" % output_file_name
         logging.info( message )
         response.append( "<div class='message'>%s</div>" % message )
