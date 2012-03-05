@@ -9,6 +9,10 @@ Copyright (c) 2012 Telefónica I+D. All rights reserved.
 """
 
 import sys
+
+if sys.version_info < (2, 7):
+    sys.path.append( '/kunden/homepages/8/d228439513/htdocs/lib/python2.6/site-packages/xlrd-0.7.3-py2.6.egg' )
+
 import getopt
 import xlrd
 import os
