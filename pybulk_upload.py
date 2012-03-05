@@ -26,7 +26,10 @@ import cgitb
 cgitb.enable()
 
 def banner( message ):
-    print "\n".join( ( "*" * 20, message, "*" * 20 ))
+    return "\n".join( ( "*" * 20, message, "*" * 20 ))
+    
+def html_message( message ):
+    return "<div class='message'>%s</div>" % message 
     
 # Log file at tmp dir based on script name
 tempdir = tempfile.gettempdir()
@@ -163,7 +166,7 @@ class Slicer:
     def slice( self, start, end ):
         if start> end:
             start, end = ( end, start )
-        return [ self.sheet.row( i ) for i in xrange( start, end ) ]
+        return [ self.sheet.row( i ) for i in xrange( start, end+1 ) ]
 
 CHUNK_SIZE = 10000
 
@@ -198,10 +201,12 @@ def copy_file( fileitem, target_path ):
     
 def write_response( headers, response ):
     for h in headers:
+        logging.debug( "header %s" % h)
         print h
     print ""
-    for r in response:
-        print response
+    for i,r in enumerate( response ):
+        logging.debug( "response %d: %s" % (i,r))
+        print r
     
 def main(argv=None):
     
@@ -247,18 +252,31 @@ def main(argv=None):
         # End position
         end = int( form.getfirst( 'end', slicer.num_rows ) )
         rows = slicer.slice( start, end )
-        # print "\n".join( [ str( r ) for r in rows ] )
+        logging.debug( banner( "slicer") )
+        logging.debug( "\n".join( [ str( r ) for r in rows ] ) )
         
         # Process the ZIP file
-        # Read the names of the files
         zip_file_param = form[ 'zip' ]
         base_name = os.path.splitext( os.path.basename( zip_file_param.filename ) )[0]
         # copy it to the temp directory
         zip_file_name = copy_file( zip_file_param, base_path )
+        # Read the names of the files
         z = zipfile.ZipFile( zip_file_param.file, 'r' )
         files = sorted( z.namelist() )
-        logging.info( "Zip file copied to %s", zip_file_name )
+        message = "Zip file copied to %s" % zip_file_name
+        logging.info( message )
+        response.append( html_message( message ) )
         logging.debug( "Files to sort: %s" % ",".join( files ) )
+        # Decompress the file
+        message = "Decompressing file %s at directory %s" % ( zip_file_name, base_path  )
+        logging.info( message )
+        response.append( html_message( message ))
+        def get_members( z, start, end ):
+            for i, zinfo in enumerate( z.infolist() ):
+                if i>=start and i<end+1:
+                    yield zinfo
+            
+        z.extractall( base_path, get_members( z, start, end) )
         
         # Generating bulk_upload text file
         b = BulkOperationFormatter( base_path, field_delimiter )
@@ -294,7 +312,7 @@ def main(argv=None):
         output_file_name = os.path.join( base_path, base_name ) + ".txt"
         message = "Output File name located at: %s" % output_file_name
         logging.info( message )
-        response.append( "<div class='message'>%s</div>" % message )
+        response.append( html_message( message ) )
         response.append( "<hr/>" )
 
         output_file = open( output_file_name, "w" )
@@ -322,7 +340,7 @@ def test_main():
     sys.exit(main())
     
 def test_summary():
-    banner( 'test_delimiter')
+    print banner( 'test_delimiter')
     
     texto = ( \
     """Visita a la Torre de les Aigües (Pere Falqués, 1881) rehabilitada per l'arquitecte Antoni Vilanova (centre). A la dreta XXXX, arquitecte de l'equip de Vilanova. A l'esquerra, Jordi Fossas, arquitecte i president de l'AHPN.""", \
@@ -404,7 +422,7 @@ def test_summary():
     
 def test_delimiter():
     
-    banner( 'test_delimiter')
+    print banner( 'test_delimiter')
     
     tests = ( \
     """Visita a la Torre de les Aigües (Pere Falqués) mucho más texto""", \
@@ -419,5 +437,6 @@ def test_delimiter():
             print "don't match"
     
 if __name__ == "__main__":
-    test_delimiter( )
-    test_summary()
+    #test_delimiter( )
+    #test_summary()
+    test_main()
