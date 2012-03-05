@@ -25,20 +25,37 @@ import cgitb
 
 cgitb.enable()
 
+def banner( message ):
+    print "\n".join( ( "*" * 20, message, "*" * 20 ))
+    
 # Log file at tmp dir based on script name
 tempdir = tempfile.gettempdir()
 log_file=os.path.join( tempdir, os.path.splitext( sys.argv[0] )[0]+ ".log" )
 logging.basicConfig(filename=log_file,level=logging.DEBUG)
 
-stop_delimiters = re.compile( '[(\.,;\[]|\si\s')
+stop_delimiters = re.compile( '[,;\.]|(\si\s)')
+open_close_delimiters = re.compile( '[\)\]]')
 MAX_SUMMARY = 100
+
+def generate_delimiter_re( open_delimiter, close_delimiter ):
+    c = re.compile( "".join( ( open_delimiter, '[^', close_delimiter, ']*$' ) ) )
+    return c
+    
 def summarize( message ):
     # Position for first closing delimiter 
-    result = message[:MAX_SUMMARY]
-    match = stop_delimiters.search( message )
+    result = message[:MAX_SUMMARY][::-1]
+    #print "reversed message=",result
+    match = open_close_delimiters.search( result )
     if match is not None and match.start() < MAX_SUMMARY:
-        result = message[:match.start()]
-    return result
+        result = result[match.start()-1:]
+        #print "result open_close:", result
+    else:
+        match = stop_delimiters.search ( result )
+        if match is not None and match.start() < MAX_SUMMARY:
+            result = result[ match.end():]
+            #print "result stop:", result
+    # print "reversed=", result
+    return result[::-1]
 
 class HtmlFormatter:
     def __init__ ( self ):
@@ -305,6 +322,8 @@ def test_main():
     sys.exit(main())
     
 def test_summary():
+    banner( 'test_delimiter')
+    
     texto = ( \
     """Visita a la Torre de les Aigües (Pere Falqués, 1881) rehabilitada per l'arquitecte Antoni Vilanova (centre). A la dreta XXXX, arquitecte de l'equip de Vilanova. A l'esquerra, Jordi Fossas, arquitecte i president de l'AHPN.""", \
     """Visita a la Torre de les Aigües (Pere Falqués, 1881) rehabilitada per l'arquitecte Antoni Vilanova (esquerra). Cap a la dreta Jordi Fossas, arquitecte i president de l'AHPN i Juan Roca, del MUHBA.""", \
@@ -320,7 +339,7 @@ def test_summary():
     """Façana de l'Església del Sagrat Cor de Jesús""", \
     """Ceràmica d'Olivé Milian, 2002, dedicada a la Mare de Deu de Montserrat, damunt l'entrada a la façana de l'Església del Sagrat Cor de Jesús""", \
     """Pintada de la Guerra 1936-1939 "Viva la FAI y CNT" a l'interior del campanar de l'Església del Sagrat Cor de Jesús. També es poden llegir pintades obcenes com "El cura de esta casa de putas..." o "El cura de esta misa es un maricón...""", \
-    """Pintada de la Guerra 1936-1939 "Madrid es nuestro, de las fuerzas leales a la república, y lo será siempre""", \
+    """Pintada de la Guerra 1936-1939 "Madrid es nuestro, de las fuerzas leales a la república, y lo será siempre" """, \
     """Pintada de la Guerra 1936-1939, nu femení amb frases obcenes.""", \
     """Única campana conservada, la "Isidra" a l'Església del Sagrat Cor de Jesús. La campana porta els noms de Martina, Isidra i Antònia, i la data de 15/5/19XX""", \
     """Des del campanar de l'Església del Sagrat Cor, la fàbrica cremada de Ca l'Alier al carrer Fluvià-Talsa. A la dreta, Pere IV.""", \
@@ -383,5 +402,22 @@ def test_summary():
     for t in texto:
         print "resumen:", summarize( t )
     
+def test_delimiter():
+    
+    banner( 'test_delimiter')
+    
+    tests = ( \
+    """Visita a la Torre de les Aigües (Pere Falqués) mucho más texto""", \
+    """Visita a la Torre de les Aigües (Pere Falqués con mucho más texto"""
+    )
+    c = generate_delimiter_re( '\(', '\)' )
+    for t in tests:
+        m = c.search( t )
+        if m is not None:
+            print m.group()
+        else:
+            print "don't match"
+    
 if __name__ == "__main__":
-    test_summary( )
+    test_delimiter( )
+    test_summary()
