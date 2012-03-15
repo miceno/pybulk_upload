@@ -147,9 +147,13 @@ class BulkOperationFormatter:
         MODE_1900 = 0
         MODE_1904 = 1
         
-        date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
-        logging.debug( "date: %s" % datetime(*date_tuple).isoformat() )
-        keywords.append( self.tupledate_to_isodate( date_tuple ) )
+        value = row[ self.DATE ].value
+        date_string = value
+        if row[ self.DATE ].ctype == xlrd.XL_CELL_DATE:
+            date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
+            date_string = self.tupledate_to_isodate( date_tuple )
+        logging.debug( "date: %s" % date_string )
+        keywords.append( date_string )
 
         result.append( ",".join( keywords ) )
         result.append( os.path.join( self.base_path, file_name ) )
