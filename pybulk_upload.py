@@ -248,7 +248,8 @@ def main(argv=None):
         # Read data from the XLS file
         # XLS file to process   
         # xls_file_name = 'fotos.xls'
-        xls_file_name = form[ 'xls' ].filename
+        xls_file_param = form[ 'xls' ]
+        xls_file_name = copy_file( xls_file_param, base_path )
         
         slicer = Slicer( xls_file_name, 0 )
         # Start position
