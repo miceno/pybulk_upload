@@ -133,7 +133,9 @@ class BulkOperationFormatter:
         """generate a row"""
         result = []
         # Strip extention of the filename
-        result.append( os.path.splitext( os.path.split( file_name )[1] )[0] )
+        raw_file_name = os.path.split( file_name )[1]
+        raw_title = os.path.splitext( raw_file_name )[0]
+        result.append( unicode( raw_title, 'utf-8' ) )
         result.append( summarize( row[ self.DESCRIPTION ].value) )
         result.append( row[ self.DESCRIPTION ].value )
         keywords = []
@@ -156,7 +158,7 @@ class BulkOperationFormatter:
         keywords.append( date_string )
 
         result.append( ",".join( keywords ) )
-        result.append( os.path.join( self.base_path, file_name ) )
+        result.append( os.path.join( self.base_path, unicode( file_name, 'utf-8' ) ) )
         return result
         pass
 
