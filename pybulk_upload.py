@@ -174,9 +174,10 @@ class Slicer:
         self.num_rows = self.sheet.nrows
         
     def slice( self, start, end ):
+        """Get a slice from row [start, end), that is, it does not include end"""
         if start> end:
             start, end = ( end, start )
-        return [ self.sheet.row( i ) for i in xrange( start, end+1 ) ]
+        return [ self.sheet.row( i ) for i in xrange( start, end ) ]
 
 CHUNK_SIZE = 10000
 
@@ -217,6 +218,15 @@ def write_response( headers, response ):
     for i,r in enumerate( response ):
         logging.debug( "response %d: %s" % (i,r))
         print r
+        
+def getfirstInt( form , field_name, default = "" ):
+    """Get the first element of a form as an integer. Check if it is empty"""
+    value = form.getfirst( field_name, default )
+    result = 0
+    if value is not None and value != "":
+        result = int( value )
+    return result
+    
     
 def main(argv=None):
     
@@ -260,9 +270,14 @@ def main(argv=None):
         
         slicer = Slicer( xls_file_name, 0 )
         # Start position
-        start = int( form.getfirst( 'start', 0 ) )
+        start = getfirstInt( form, 'start', 0 ) - 1
+        if start < 0:
+            start = 0
         # End position
-        end = int( form.getfirst( 'end', slicer.num_rows ) )
+        end = getfirstInt( form, 'end', slicer.num_rows)
+        if end == 0:
+            end = slicer.num_rows
+        
         rows = slicer.slice( start, end )
         logging.debug( banner( "slicer") )
         logging.debug( "\n".join( [ str( r ) for r in rows ] ) )
@@ -275,6 +290,7 @@ def main(argv=None):
         # Read the names of the files
         z = zipfile.ZipFile( zip_file_param.file, 'r' )
         files = sorted( z.namelist() )
+        files = files[ start:end]
         message = "Zip file copied to %s" % zip_file_name
         logging.info( message )
         response.append( html_message( message ) )
@@ -283,12 +299,8 @@ def main(argv=None):
         message = "Decompressing file %s at directory %s" % ( zip_file_name, base_path  )
         logging.info( message )
         response.append( html_message( message ))
-        def get_members( z, start, end ):
-            for i, zinfo in enumerate( z.infolist() ):
-                if i>=start and i<end+1:
-                    yield zinfo
-            
-        z.extractall( base_path, get_members( z, start, end) )
+                    
+        z.extractall( base_path, files )
         
         # Generating bulk_upload text file
         b = BulkOperationFormatter( base_path, field_delimiter )
