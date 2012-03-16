@@ -231,7 +231,8 @@ def main(argv=None):
     try:
         field_delimiter = '\t'
         line_delimiter = '\r\n'
-        destination_path = os.path.join( 'gallery','import')
+        DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
+        destination_path = os.path.expanduser( os.path.join( *DEFAULT_TARGET_PATH ) )
         
         form = cgi.FieldStorage()
         #for i in form:
