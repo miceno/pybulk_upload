@@ -29,6 +29,18 @@ import cgitb
 
 cgitb.enable()
 
+# Global Folders dictionary
+folders = {}
+
+def read_folders( filename ):
+    global folders
+    folders = {}
+    try:
+        for d in csv.DictReader(open(filename),fieldnames=['0','1']):
+            folders[ d['0'] ] = d['1']
+    except:
+        pass
+
 def banner( message ):
     return "\n".join( ( "*" * 20, message, "*" * 20 ))
     
@@ -88,7 +100,7 @@ class BulkOperationFormatter:
     """
     def __init__( self, base_path, field_delimiter = '\t', line_delimiter = '\r\n' ):
         self.NUMBER = 0
-        self.REFERENCE = 1
+        self.FOLDER = 1
         self.TERMS = 2
         self.MEDIA = 3
         self.DESCRIPTION = 4
@@ -140,7 +152,13 @@ class BulkOperationFormatter:
         result.append( row[ self.DESCRIPTION ].value )
         keywords = []
         keywords.append( str( int( row[ self.NUMBER ].value ) ) )
-        keywords.append( row[ self.REFERENCE ].value )
+        # Get folder name, or empty string
+        folder_name = folders.get( row[ self.FOLDER ].value, "" )
+        if folder_name != "":
+            keywords.append( folder_name )
+        # Add also folder number in case it is not empty
+        if row[ self.FOLDER ].value != "" :
+            keywords.append( row[ self.FOLDER ].value )
         keywords.append( row[ self.TERMS ].value ) 
         keywords.append( row[ self.MEDIA ].value )
 
@@ -262,6 +280,9 @@ def main(argv=None):
         # Use a temporal directory to decompress the zip file
         base_path = tempfile.mkdtemp( dir = destination_path )
 
+        # Read the folders data
+        read_folders( 'carpetes.csv' )
+        
         # Read data from the XLS file
         # XLS file to process   
         # xls_file_name = 'fotos.xls'
