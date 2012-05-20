@@ -1,1 +1,13 @@
-AddHandler cgi-script .py
+#AddHandler cgi-script .py
+#<Directory pybulk>
+#Order deny,allow
+#Deny from all
+#Allow from 10.0.1.1
+#Allow from 80.25.181.167
+
+AuthType Basic
+AuthName "Restricted Files"
+AuthUserFile /homepages/8/d228439513/htdocs/public/pybulk/.htpasswd
+Require user arxiu
+
+#</Directory>
