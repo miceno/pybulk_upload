@@ -133,7 +133,7 @@ class BulkOperationFormatter:
         """
         (y,m,d, hh,mm,ss) = tupledate
         nonzero = lambda n: n!=0
-        date = "%04d-%02d-%02d"  % (y,m,d)    if filter(nonzero, (y,m,d))                else ''
+        date = "%02d-%02d-%04d"  % (d,m,y)    if filter(nonzero, (d,m,y))                else ''
         time = "T%02d:%02d:%02d" % (hh,mm,ss) if filter(nonzero, (hh,mm,ss)) or not date else ''
         return date+time
       
