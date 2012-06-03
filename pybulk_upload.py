@@ -1,6 +1,6 @@
-#!/usr/bin/env python 
+#!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 # encoding: utf-8
-# !/Library/Frameworks/Python.framework/Versions/2.7/bin/python
+#!/usr/bin/env python 
 """
 pybulk_upload.py
 
@@ -166,12 +166,17 @@ class BulkOperationFormatter:
         MODE_1904 = 1
         
         value = row[ self.DATE ].value
+        
         if row[ self.DATE ].ctype == xlrd.XL_CELL_DATE:
             date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
             date_string = self.tupledate_to_isodate( date_tuple )
-        else
-            # It is a year as a number, so cast to int and then to str
+        elif row[ self.DATE ].ctype == xlrd.XL_CELL_TEXT:
+            # It is a year as a number or as a text
+            date_string = value
+        elif row[ self.DATE ].ctype == xlrd.XL_CELL_NUMBER:
+            # It is a year as a number or as a text
             date_string = str( int( value ) )
+            
         logging.debug( "date: %s" % date_string )
         keywords.append( date_string )
 
@@ -253,7 +258,8 @@ def main(argv=None):
     response = []
     headers = []
     
-    DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
+    DEFAULT_TARGET_PATH = ( '~','Downloads','gallery','bulk' )
+    # DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
     destination_path = os.path.expanduser( os.path.join( *DEFAULT_TARGET_PATH ) )
     
     # Log file writes to the destination path
