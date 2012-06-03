@@ -1,6 +1,6 @@
-#!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
-# encoding: utf-8
 #!/usr/bin/env python 
+# encoding: utf-8
+# !/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 """
 pybulk_upload.py
 
@@ -258,8 +258,8 @@ def main(argv=None):
     response = []
     headers = []
     
-    DEFAULT_TARGET_PATH = ( '~','Downloads','gallery','bulk' )
-    # DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
+    # DEFAULT_TARGET_PATH = ( '~','Downloads','gallery','bulk' )
+    DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
     destination_path = os.path.expanduser( os.path.join( *DEFAULT_TARGET_PATH ) )
     
     # Log file writes to the destination path
