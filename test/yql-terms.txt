@@ -1,0 +1,2 @@
+q=select%20*%20from%20search.termextract%20where%20context%3D%22Interior%20de%20l'Esgl%C3%A9sia%20del%20Sagrat%20Cor%20de%20Jes%C3%BAs%2C%20la%20%C3%BAnica%20del%20Poblenou%20que%20nou%20fou%20totalment%20destru%C3%AFda%20pel%20foc%20el%201936%2C%20gr%C3%A0cies%20als%20treballadors%20de%20les%20cotxeres%20del%20costat%20que%20van%20tenir%20por%20que%20el%20foc%20es%20propagu%C3%A9s.%20En%20el%20terra%20s'observen%20els%20senyals%20del%20foc%2C%20que%20va%20enderrocar%20la%20coberta.%22
+diagnostics=true
