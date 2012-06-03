@@ -1,6 +1,6 @@
-#!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
-# encoding: utf-8
 #!/usr/bin/env python 
+# encoding: utf-8
+# !/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 """
 pybulk_upload.py
 
@@ -48,9 +48,6 @@ def html_message( message ):
     return "<div class='message'>%s</div>" % message 
     
 # Log file at tmp dir based on script name
-tempdir = tempfile.gettempdir()
-log_file=os.path.join( tempdir, os.path.splitext( sys.argv[0] )[0]+ ".log" )
-logging.basicConfig(filename=log_file,level=logging.DEBUG)
 
 stop_delimiters = re.compile( '[,;\.]|(\si\s)')
 open_close_delimiters = re.compile( '[\)\]]')
@@ -169,10 +166,12 @@ class BulkOperationFormatter:
         MODE_1904 = 1
         
         value = row[ self.DATE ].value
-        date_string = value
         if row[ self.DATE ].ctype == xlrd.XL_CELL_DATE:
             date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
             date_string = self.tupledate_to_isodate( date_tuple )
+        else
+            # It is a year as a number, so cast to int and then to str
+            date_string = str( int( value ) )
         logging.debug( "date: %s" % date_string )
         keywords.append( date_string )
 
@@ -254,25 +253,30 @@ def main(argv=None):
     response = []
     headers = []
     
+    DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
+    destination_path = os.path.expanduser( os.path.join( *DEFAULT_TARGET_PATH ) )
+    
+    # Log file writes to the destination path
+    log_file=os.path.join( destination_path, os.path.splitext( sys.argv[0] )[0]+ ".log" )
+    logging.basicConfig(filename=log_file,level=logging.DEBUG)
+    
     # write_response( headers, response )
     if argv is None:
         argv = sys.argv
     try:
         field_delimiter = '\t'
         line_delimiter = '\r\n'
-        DEFAULT_TARGET_PATH = ( '~','private','gallery','bulk' )
-        destination_path = os.path.expanduser( os.path.join( *DEFAULT_TARGET_PATH ) )
         
         form = cgi.FieldStorage()
         #for i in form:
         #    logging.debug( "%s: %s" % ( i, form.getvalue( i ) ) )
-
+        
         # Check requisite fields
         requisites = ( 'zip', 'xls' )
         for requisite in requisites:
             if requisite not in form:
                 raise ValueError, 'Required parameter not in query string: %s' % requisite
-
+        
         # Create destination path
         try:
             os.makedirs( destination_path )
@@ -280,7 +284,7 @@ def main(argv=None):
             pass
         # Use a temporal directory to decompress the zip file
         base_path = tempfile.mkdtemp( dir = destination_path )
-
+        
         # Read the folders data
         read_folders( 'carpetes.csv' )
         
@@ -338,7 +342,7 @@ def main(argv=None):
             logging.debug( "row: %s" % row)
             result.append( row )
             html_result.append( h.format( row ) )
-
+        
         logging.debug( "result= %s" % result )
         logging.debug( "html_result = %s" % html_result )
         
@@ -360,7 +364,7 @@ def main(argv=None):
         logging.info( message )
         response.append( html_message( message ) )
         response.append( "<hr/>" )
-
+        
         output_file = open( output_file_name, "w" )
         for r in result:
             output_file.write( b.format( r ).encode( 'utf-8' ) )
