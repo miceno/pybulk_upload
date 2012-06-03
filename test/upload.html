@@ -1,0 +1,19 @@
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <link rel="stylesheet" href="bulk.css" type="text/css" media="screen" title="bulk" charset="utf-8">
+    <title>Bulk Upload form</title>
+</head>
+<body>
+    <h1 id="">Bulk Upload</h1>
+<form action="cgi-upload.py" enctype="multipart/form-data" method="post">
+    <div class='form-input'>
+        <label for='form-xls-control'>Please specify a file, or a set of files:</label>
+        <input id='file_name' type="file" name="file" size="40">
+    </p>
+    <div class='form-button'>
+        <input class='form-send' type="submit" value="Send">
+    </div>
+</form>
+</body>
+</html>
