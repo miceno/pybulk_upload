@@ -161,7 +161,7 @@ class BulkOperationFormatter:
         keywords.append( row[ self.MEDIA ].value )
 
         keywords.append( row[ self.PLACE ].value )
-        keywords.append( row[ self.AUTHOR ].value )
+        keywords.append( "Autor: " + row[ self.AUTHOR ].value )
         MODE_1900 = 0
         MODE_1904 = 1
         
