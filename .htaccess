@@ -1,4 +1,4 @@
-#AddHandler cgi-script .py
+AddHandler cgi-script .py
 #<Directory pybulk>
 #Order deny,allow
 #Deny from all
