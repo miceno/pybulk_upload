@@ -185,8 +185,6 @@ class BulkOperationFormatter:
           elif row[ self.DATE ].ctype == xlrd.XL_CELL_NUMBER:
               # It is a year as a number or as a text
               date_string = str( int( value ) )
-          elif row[ self.DATE ].ctype == xlrd.XL_CELL_EMPTY:
-              date_string = '1/1/1'
         except Exception as e:
           logging.error("exception processing date", exc_info=True)
 
