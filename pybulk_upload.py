@@ -1,6 +1,6 @@
 #!/usr/bin/env python 
 # encoding: utf-8
-# !/Library/Frameworks/Python.framework/Versions/2.7/bin/python
+# #!/Library/Frameworks/Python.framework/Versions/2.7/bin/python
 """
 pybulk_upload.py
 
@@ -10,8 +10,8 @@ Copyright (c) 2012 Telefónica I+D. All rights reserved.
 
 import sys
 
-if sys.version_info < (2, 7):
-    sys.path.append( '/kunden/homepages/8/d228439513/htdocs/lib/python2.6/site-packages/xlrd-0.7.3-py2.6.egg' )
+#if sys.version_info < (2, 8):
+sys.path.append( '/kunden/homepages/8/d228439513/htdocs/.local/lib/python2.7/site-packages/xlrd-0.7.7-py2.7.egg' )
 
 import getopt
 import xlrd
@@ -143,6 +143,7 @@ class BulkOperationFormatter:
         """generate a row"""
         result = []
         # Strip extention of the filename
+        logging.debug("generating...")
         raw_file_name = os.path.split( file_name )[1]
         raw_title = os.path.splitext( raw_file_name )[0]
         result.append( unicode( raw_title, 'utf-8' ) )
@@ -157,27 +158,39 @@ class BulkOperationFormatter:
         # Add also folder number in case it is not empty
         if row[ self.FOLDER ].value != "" :
             keywords.append( row[ self.FOLDER ].value )
+        logging.debug("terms=%s", row[ self.TERMS ].value)
         keywords.append( row[ self.TERMS ].value ) 
+        logging.debug("media=%s", row[ self.MEDIA ].value)
         keywords.append( row[ self.MEDIA ].value )
 
+        logging.debug("place=%s", row[ self.PLACE ].value)
         keywords.append( row[ self.PLACE ].value )
-        keywords.append( "Autor: " + row[ self.AUTHOR ].value )
+        logging.debug("autor=%s", row[ self.AUTHOR ].value)
+        keywords.append( "Autor: "+ row[ self.AUTHOR ].value )
         MODE_1900 = 0
         MODE_1904 = 1
         
-        value = row[ self.DATE ].value
+        date_string = "N/D"
+        try:
+          logging.debug("reading date: %s", row[self.DATE].value)
+          value = row[ self.DATE ].value
         
-        if row[ self.DATE ].ctype == xlrd.XL_CELL_DATE:
-            date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
-            date_string = self.tupledate_to_isodate( date_tuple )
-        elif row[ self.DATE ].ctype == xlrd.XL_CELL_TEXT:
-            # It is a year as a number or as a text
-            date_string = value
-        elif row[ self.DATE ].ctype == xlrd.XL_CELL_NUMBER:
-            # It is a year as a number or as a text
-            date_string = str( int( value ) )
-            
-        logging.debug( "date: %s" % date_string )
+          logging.debug("date ctype: %s", row[self.DATE].ctype)
+          if row[ self.DATE ].ctype == xlrd.XL_CELL_DATE:
+              date_tuple = xlrd.xldate_as_tuple( row[ self.DATE ].value, MODE_1900 )
+              date_string = self.tupledate_to_isodate( date_tuple )
+          elif row[ self.DATE ].ctype == xlrd.XL_CELL_TEXT:
+              # It is a year as a number or as a text
+              date_string = value
+          elif row[ self.DATE ].ctype == xlrd.XL_CELL_NUMBER:
+              # It is a year as a number or as a text
+              date_string = str( int( value ) )
+          elif row[ self.DATE ].ctype == xlrd.XL_CELL_EMPTY:
+              date_string = '1/1/1'
+        except Exception as e:
+          logging.error("exception processing date", exc_info=True)
+
+        logging.debug( "date: %s", date_string )
         keywords.append( date_string )
 
         result.append( ",".join( keywords ) )
@@ -347,10 +360,11 @@ def main(argv=None):
             row = b.generate( r, f)
             logging.debug( "row: %s" % row)
             result.append( row )
-            html_result.append( h.format( row ) )
+            html_str = h.format(row)
+            html_result.append( html_str )
         
-        logging.debug( "result= %s" % result )
-        logging.debug( "html_result = %s" % html_result )
+        logging.debug( "result= %s", result )
+        logging.debug( "html_result = %s", html_result )
         
         headers.append( "Content-type: text/html" )
         response.append( """<html>
@@ -366,7 +380,7 @@ def main(argv=None):
         txt_result = line_delimiter.join( [ field_delimiter.join( r ).encode( 'utf-8') for r in result] )
         # Write output file
         output_file_name = os.path.join( base_path, base_name ) + ".txt"
-        message = "Output File name located at: %s" % output_file_name
+        message = "Output File name located at: <br/> %s" % output_file_name
         logging.info( message )
         response.append( html_message( message ) )
         response.append( "<hr/>" )
